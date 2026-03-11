@@ -4,14 +4,11 @@
 // Déploiement Hostinger :
 //   1. npm install
 //   2. npm run build
-//   3. pm2 start ecosystem.config.js --env production
-//      ou : NODE_ENV=production node server.js
+//   3. NODE_ENV=production node server.js
 
 'use strict';
 
 // ─── Chargement des variables d'environnement ────────────────────────────────
-// Sur Hostinger, les variables peuvent être définies via le panel OU via .env.local
-// On tente les deux (le panel prime via process.env déjà défini)
 try {
   require('dotenv').config({ path: '.env.local' });
 } catch {
@@ -31,29 +28,34 @@ const handle = app.getRequestHandler();
 
 app.prepare().then(async () => {
 
-  // ─── Test de connexion MySQL au démarrage ─────────────────────────────────
-  // Détecte les erreurs de configuration BDD avant d'accepter du trafic.
-  try {
-    // Init dossier uploads
+  // ─── Init dossier uploads ─────────────────────────────────────────────────
   try {
     const { initUploadsDir } = require('./lib/localImages.js');
     initUploadsDir();
     console.log('✅ Dossier public/uploads/ prêt');
-  } catch { /* ignore en dev */ }
-
-  // Test MySQL
-  const { testConnection } = require('./.next/server/chunks/lib/mysql.js');
-    const ok = await testConnection();
-    if (ok) {
-      console.log('✅ MySQL : connexion établie');
-    } else {
-      console.warn('⚠️  MySQL : connexion échouée — vérifiez les variables MYSQL_* dans .env.local');
-    }
   } catch {
-    // En dev ou si le chunk n'existe pas encore, on ignore silencieusement
-    if (!dev) {
-      console.warn('⚠️  MySQL : impossible de tester la connexion au démarrage');
-    }
+    // ignore — module peut ne pas exister en dev
+  }
+
+  // ─── Test de connexion MySQL au démarrage ─────────────────────────────────
+  // On importe directement depuis le source TypeScript compilé par Next.js
+  // plutôt que d'utiliser un chemin de chunk fragile.
+  try {
+    const mysql = require('mysql2/promise');
+    const conn = await mysql.createConnection({
+      host:     process.env.MYSQL_HOST     ?? 'localhost',
+      port:     Number(process.env.MYSQL_PORT ?? 3306),
+      user:     process.env.MYSQL_USER     ?? 'woodiz',
+      password: process.env.MYSQL_PASSWORD ?? '',
+      database: process.env.MYSQL_DATABASE ?? 'woodiz',
+      connectTimeout: 10_000,
+    });
+    await conn.execute('SELECT 1');
+    await conn.end();
+    console.log('✅ MySQL : connexion établie');
+  } catch (err) {
+    console.warn('⚠️  MySQL : connexion échouée —', err.message);
+    console.warn('   Vérifiez les variables MYSQL_* dans les variables d\'environnement Hostinger.');
   }
 
   const server = createServer(async (req, res) => {
@@ -76,7 +78,6 @@ app.prepare().then(async () => {
   });
 
   // ─── Arrêt gracieux (SIGTERM / SIGINT) ───────────────────────────────────
-  // Hostinger envoie SIGTERM lors des redémarrages / déploiements.
   function shutdown(signal) {
     console.log(`\n[woodiz/server] Signal ${signal} reçu — arrêt gracieux…`);
     server.close((err) => {
