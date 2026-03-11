@@ -110,8 +110,17 @@ export default function StoreHydration() {
       if (data) {
         // Appliquer sans déclencher de save intermédiaire
         isApplyingServerData = true;
-        if (data.settings)
-          useWoodizStore.setState((s) => ({ settings: { ...s.settings, ...data.settings } }));
+        if (data.settings) {
+          // Garantir que les champs tableaux ne sont jamais null (évite crash .map())
+          const safeSettings = {
+            ...data.settings,
+            features:     Array.isArray(data.settings.features)     ? data.settings.features     : undefined,
+            orderButtons: Array.isArray(data.settings.orderButtons)  ? data.settings.orderButtons : undefined,
+            sliderImages: Array.isArray(data.settings.sliderImages)  ? data.settings.sliderImages : [],
+            sliderSlides: Array.isArray(data.settings.sliderSlides)  ? data.settings.sliderSlides : [],
+          };
+          useWoodizStore.setState((s) => ({ settings: { ...s.settings, ...safeSettings } }));
+        }
         if (data.categories)        useWoodizStore.setState({ categories: data.categories });
         if (data.products)          useWoodizStore.setState({ products: data.products });
         if (data.promos)            useWoodizStore.setState({ promos: data.promos });
