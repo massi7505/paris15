@@ -2,9 +2,8 @@
 const path = require("path");
 
 const nextConfig = {
-  // ─── Hostinger Node.js ────────────────────────────────────────────────────
-  // ⚠️  NE PAS utiliser output:"standalone" avec un server.js custom.
-  // output: "standalone",  // ← désactivé intentionnellement
+  // ─── Hostinger Node.js — mode standalone requis ───────────────────────────
+  output: "standalone",
 
   // ─── Packages Node.js natifs (ne pas bundler par Webpack) ────────────────
   serverExternalPackages: ["mysql2", "bcryptjs", "sharp"],
@@ -54,9 +53,8 @@ const nextConfig = {
       },
     ];
   },
+
   // ─── Alias @/ pour Linux/Hostinger ──────────────────────────────────────
-  // Sur Linux, webpack ne lit pas toujours le tsconfig pour résoudre @/.
-  // On le force ici directement pour garantir le build sur Hostinger.
   webpack(config) {
     config.resolve.alias["@"] = path.resolve(__dirname);
     return config;
