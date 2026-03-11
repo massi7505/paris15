@@ -1,0 +1,25 @@
+﻿node_modules/
+.next/
+.env.local
+.env
+
+# Hostinger specific
+.env.local
+.env.production
+.env
+
+# Backup files
+*.sql.gz
+/tmp/*.sql
+-e 
+# PM2 logs
+logs/*.log
+
+# Images uploadées — stockées sur Hostinger, pas dans Git
+# Sauvegarder via : rsync ou le panel FTP Hostinger
+public/uploads/products/
+public/uploads/slider/
+public/uploads/promos/
+public/uploads/categories/
+public/uploads/misc/
+!public/uploads/**/.gitkeep
